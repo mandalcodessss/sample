@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16302f">
+<title>Guest Desk</title>
+<style>
+:root{--hero:#16302f;--accent:#c9a15a;--bg:#f5f4f1;--card:#fff;--ink:#1b2427;--mute:#66757a;--line:#e1e4e2;--sel:#f3ead8}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1214;--card:#171e21;--ink:#eef1f0;--mute:#94a3a7;--line:#27333a;--sel:#2a2619}}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:520px;margin:0 auto;padding-bottom:40px}
+.hero{background:var(--hero);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 28px) 22px 56px;border-radius:0 0 28px 28px;position:relative}
+.hero p{margin:0;color:rgba(255,255,255,.72);font-size:14px}
+.hero h1{font:500 34px/1.1 Georgia,"Times New Roman",serif;margin:6px 0 10px;letter-spacing:.2px}
+.lang{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:16px;display:flex;border:1px solid rgba(255,255,255,.3);border-radius:20px;overflow:hidden}
+.lang button{background:none;border:0;color:#fff;padding:5px 12px;font:13px system-ui;cursor:pointer}
+.lang button[aria-pressed=true]{background:var(--accent);color:#111}
+.tag{position:absolute;right:22px;bottom:-26px;background:var(--accent);color:#111;border-radius:14px 14px 14px 14px;padding:10px 18px 10px 40px;font:600 15px system-ui;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.tag:before{content:"";position:absolute;left:14px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:var(--hero)}
+.tag select{background:transparent;border:0;font:inherit;color:inherit;max-width:130px}
+main{padding:44px 18px 0}
+h2{font-size:17px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{display:flex;flex-direction:column;gap:6px;padding:16px 14px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:transform .12s,border-color .12s}
+.tile:active{transform:scale(.97)}
+.tile .ic{font-size:26px;line-height:1}
+.tile b{font-weight:600}
+.tile small{color:var(--mute);font-size:13px;margin-top:-4px}
+.tile[aria-pressed=true]{border-color:var(--accent);background:var(--sel);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 28%,transparent)}
+.fields{margin-top:14px;display:grid;gap:10px}
+textarea,input{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font:inherit}
+.send{display:block;width:100%;margin-top:14px;padding:16px;border:0;border-radius:14px;background:#1fa55a;color:#fff;font:600 17px system-ui;cursor:pointer}
+.send:disabled{opacity:.45}
+.done{display:none;margin-top:14px;padding:16px;border-radius:14px;background:var(--sel);border:1px solid var(--accent)}
+.done.on{display:block;animation:pop .35s ease}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.links{display:grid;gap:10px;margin-top:26px}
+.links a{display:flex;justify-content:space-between;align-items:center;padding:15px 16px;background:var(--card);border:1px solid var(--line);border-radius:14px;color:var(--ink);text-decoration:none}
+.links span{color:var(--mute);font-size:14px}
+.foot{text-align:center;color:var(--mute);font-size:12px;margin-top:26px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="lang"><button id="en" aria-pressed="true">EN</button><button id="hi" aria-pressed="false">हिं</button></div>
+  <p id="welcome"></p>
+  <h1 id="hotel"></h1>
+  <div class="tag" id="tag"></div>
+</header>
+<main>
+  <h2 id="h-need"></h2>
+  <div class="grid" id="tiles"></div>
+  <div class="fields">
+    <textarea id="note" rows="2"></textarea>
+    <input id="name" type="text">
+  </div>
+  <button class="send" id="send" disabled></button>
+  <div class="done" id="done" role="status"></div>
+  <div class="links" id="links"></div>
+  <div class="foot">Guest Desk</div>
+</main>
+<script>
+/* ======== EDIT PER HOTEL ======== */
+var CONFIG = {
+  whatsapp: "919999999999",   // demo me APNA number; pilot me hotel ka
+  phone: "+919999999999",
+  googleReview: "https://g.page/r/XXXX/review",
+  instagram: "https://instagram.com/hotelhandle",
+  scriptUrl: "",              // Apps Script Web App URL
+  rooms: ["101","102","103","201","202","203","204","301","302","303"]
+};
+/* demo link: ?hotel=ozone&room=204  (hotel keys neeche) */
+var PRESETS = {
+  demo:    {name:"Your Hotel",          hero:"#16302f", accent:"#c9a15a"},
+  bloom:   {name:"Bloom Hotel",         hero:"#1c1c1c", accent:"#ffcc00"},
+  bawa:    {name:"Bawa Continental",    hero:"#111111", accent:"#c4a36a"},
+  ozone:   {name:"Hotel Ozone Inn",     hero:"#12361f", accent:"#7bc47f"},
+  majlis:  {name:"The Majlis Hotel",    hero:"#111418", accent:"#c19a4f"},
+  shabana: {name:"Hotel Shabana",       hero:"#0f2f45", accent:"#5bb3d6"}
+};
+/* ================================ */
+var T = {
+ en:{welcome:"Welcome. We’re one tap away.",need:"What do you need?",note:"Anything else we should know? (optional)",name:"Your name (optional)",send:"Send to reception",
+     done:"Request sent. WhatsApp is opening so you can confirm.",room:"Select room",review:"Rate your stay",reviewS:"Takes 30 seconds",insta:"Instagram",instaS:"See what’s new",call:"Call reception",
+     tiles:[["🧺","Towels & toiletries","Fresh set"],["💧","Drinking water","Bottles"],["🧹","Room cleaning","Housekeeping"],["❄️","AC / TV / light","Not working"],["🍽️","Food order","Room service"],["📝","Complaint","We will fix it"]]},
+ hi:{welcome:"स्वागत है। बस एक टैप में मदद।",need:"आपको क्या चाहिए?",note:"कुछ और बताना हो तो लिखें (ज़रूरी नहीं)",name:"आपका नाम (ज़रूरी नहीं)",send:"रिसेप्शन को भेजें",
+     done:"रिक्वेस्ट भेज दी गई। कन्फर्म करने के लिए WhatsApp खुल रहा है।",room:"कमरा चुनें",review:"अपना अनुभव बताएं",reviewS:"सिर्फ 30 सेकंड",insta:"इंस्टाग्राम",instaS:"नया क्या है देखें",call:"रिसेप्शन को कॉल करें",
+     tiles:[["🧺","तौलिये और सामान","नया सेट"],["💧","पीने का पानी","बोतलें"],["🧹","कमरे की सफ़ाई","हाउसकीपिंग"],["❄️","AC / TV / लाइट","खराब है"],["🍽️","खाना ऑर्डर","रूम सर्विस"],["📝","शिकायत","हम ठीक करेंगे"]]}
+};
+var EN_TYPES=["Towels & toiletries","Drinking water","Room cleaning","AC / TV / light problem","Food order","Complaint"];
+var q=new URLSearchParams(location.search), P=PRESETS[q.get("hotel")]||PRESETS.demo, lang="en", chosen=-1, roomParam=q.get("room");
+var $=function(i){return document.getElementById(i)};
+var r=document.documentElement.style; r.setProperty("--hero",P.hero); r.setProperty("--accent",P.accent);
+document.querySelector('meta[name=theme-color]').content=P.hero;
+document.title=P.name+" Guest Desk"; $("hotel").textContent=P.name;
+
+var roomSel=null;
+function buildTag(){
+  var tag=$("tag");
+  if(roomParam){tag.textContent="Room "+roomParam;return}
+  tag.innerHTML='<select id="roomSel" aria-label="Room"></select>';
+  roomSel=$("roomSel");
+  roomSel.innerHTML='<option value="">'+T[lang].room+'</option>'+CONFIG.rooms.map(function(x){return"<option>"+x+"</option>"}).join("");
+  roomSel.onchange=refresh;
+}
+function room(){return roomParam||(roomSel&&roomSel.value)||""}
+function refresh(){$("send").disabled=!(room()&&chosen>-1)}
+function render(){
+  var t=T[lang];
+  $("welcome").textContent=t.welcome; $("h-need").textContent=t.need;
+  $("note").placeholder=t.note; $("name").placeholder=t.name; $("send").textContent=t.send;
+  var keep=roomSel?roomSel.value:"";
+  if(!roomParam){buildTag(); roomSel.value=keep;} else buildTag();
+  $("tiles").innerHTML="";
+  t.tiles.forEach(function(x,i){
+    var b=document.createElement("button");b.className="tile";b.type="button";
+    b.setAttribute("aria-pressed",i===chosen);
+    b.innerHTML='<span class="ic">'+x[0]+'</span><b>'+x[1]+'</b><small>'+x[2]+'</small>';
+    b.onclick=function(){chosen=i;render();refresh()};
+    $("tiles").appendChild(b);
+  });
+  $("links").innerHTML=[[t.review,t.reviewS,CONFIG.googleReview],[t.insta,t.instaS,CONFIG.instagram],[t.call,CONFIG.phone,"tel:"+CONFIG.phone]]
+    .map(function(l){return'<a href="'+l[2]+'" target="_blank" rel="noopener"><b>'+l[0]+'</b><span>'+l[1]+'</span></a>'}).join("");
+  $("en").setAttribute("aria-pressed",lang==="en");$("hi").setAttribute("aria-pressed",lang==="hi");
+  refresh();
+}
+$("en").onclick=function(){lang="en";render()};
+$("hi").onclick=function(){lang="hi";render()};
+
+$("send").onclick=function(){
+  var rm=room(), type=EN_TYPES[chosen], note=$("note").value.trim(), nm=$("name").value.trim();
+  var text="Room "+rm+": "+type+(note?" - "+note:"")+(nm?" ("+nm+")":"");
+  if(CONFIG.scriptUrl){try{fetch(CONFIG.scriptUrl,{method:"POST",mode:"no-cors",keepalive:true,headers:{"Content-Type":"text/plain"},body:JSON.stringify({room:rm,type:type,note:note,name:nm})})}catch(e){}}
+  $("done").textContent=T[lang].done; $("done").className="done on";
+  setTimeout(function(){location.href="https://wa.me/"+CONFIG.whatsapp+"?text="+encodeURIComponent(text)},900);
+};
+render();
+</script>
+</body>
+</html>
